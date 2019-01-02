@@ -30,16 +30,15 @@ uint32_t ii = 0, kk;
 int cc = 0;
 void loop() {
   ii++;
-  if ( Serial ) {
-    if ( cc == 25 ) {
-      Serial.print( szAlpha[cc] );
-      cc = 0;
-    }
-    else {
-      Serial.print( szAlpha[cc] );
-      cc++;
-    }
+  if ( cc == 25 ) {
+    Serial.print( szAlpha[cc] );
+    cc = 0;
   }
+  else {
+    Serial.print( szAlpha[cc] );
+    cc++;
+  }
+
   if ( noDelay > 1000 ) {
     noDelay -= 1000;
     digitalWrite( LED_BUILTIN, flip );
