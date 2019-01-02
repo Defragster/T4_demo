@@ -23,7 +23,7 @@ void setup() {
   while ( !Serial && millis() < 800 );
   HW_SERIAL.print( "  Serial millis=" );
   HW_SERIAL.println( millis() );
-  Serial.println("\n" __FILE__ " " __DATE__ " " __TIME__);
+  if ( Serial ) Serial.println("\n" __FILE__ " " __DATE__ " " __TIME__);
   for ( int kk = 0; kk < 26; kk++ ) {
     for ( int ll = 0; ll < 64; ll++ )
       szAlpha[kk][ll] = kk + 'A';
