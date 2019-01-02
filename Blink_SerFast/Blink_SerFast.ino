@@ -2,8 +2,6 @@
 
 #define HW_SERIAL Serial4 // pin 17 debug Tx only
 
-volatile uint32_t jj = 0;
-
 char szAlpha[26][65];
 
 elapsedMillis noDelay;
@@ -46,13 +44,10 @@ void loop() {
     noDelay -= 1000;
     digitalWrite( LED_BUILTIN, flip );
     flip = !flip;
-    HW_SERIAL.print( "ITcnt=" );
-    HW_SERIAL.println( jj );
     HW_SERIAL.print( "loop() ii=" );
     HW_SERIAL.print( ii );
     HW_SERIAL.print( "   micros=" );
     HW_SERIAL.println( micros() );
-    jj = 0;
     ii = 0;
   }
 }
