@@ -21,7 +21,7 @@ void setup() {
   Serial1.print( outstring );
 }
 
-int ii = 0, kk = 0, cc=0;
+int ii = 0, kk = 0, cc = 0, cErr = 0;
 char foo[200];
 void loop() {
   char ch = 0;
@@ -41,7 +41,9 @@ void loop() {
     if ( (sizeof(outstring) - 1) != ii ) {
       if ( ii > sizeof(foo) ) ii = sizeof(foo) - 1;
       foo[ii] = 0;
-      Serial.println( " fail ");
+      cErr++;
+      Serial.println( " fail #");
+      Serial.println( cErr );
       Serial.print( foo );
       delay( 500 );
     }
@@ -56,8 +58,11 @@ void loop() {
       Serial.print( " @" );
       Serial.print( millis() );
       Serial.print( " " );
+      if ( cErr != 0 ) {
+        Serial.println( " fail #");
+        Serial.println( cErr );
+      }
       Serial.print( foo );
-      delay(10);
     }
     if ( (sizeof(outstring) - 1) != ii )
       Serial1.print( outstring );
