@@ -6,13 +6,15 @@
 #ifdef FIRST
 #define Nmicros FBit_micros // Cortex __LDREXW&__STREXW key on var
 #define INTV_TIME 1000 // This should be 1000 to simulate millis systick_isr
-#define LOOP_CNT  10000000 // 10M is 30 secs to count contiguous us's each loop()
+#define LOOP_CNT  10000000 // 10M is 10 secs to check contiguous us's each loop()
+//#define LOOP_CNT  1000000 // 1M is 1 sec to check contiguous us's each loop()
 #else
 #define Nmicros FFit_micros // FAST FAKE :: USE WITH > #define INTV_TIME 100
 #define INTV_TIME 100 // This should be 100 to run FAKE test with 10,000 _isr's/sec
 #define LOOP_CNT  100000000 // 100M is 30 secs to count contiguous us's each loop()
 #endif
 
+#define CHANGE_SPEED // define to cycle the CPU speed
 uint32_t ArmSpeed = 600000000;
 volatile uint32_t it_millis_count = 0;
 volatile uint32_t it_cycle_count = 0;
@@ -37,7 +39,7 @@ uint32_t FBit_micros(void)  // Replaces micros() >> 100K micros. Took cycles# 17
 // FAST FAKE return a new count if _isr was called based on data change
 // Run intervaltimer at 100us, code is 4 times slower, but works with _isr 10 times faster
 //
-uint32_t FFcnt = 0;
+uint32_t FFcnt = 0, ErrFnd = 0;
 uint32_t FFit_micros(void)  // Replaces micros() >> 100K micros. Took cycles# 8948674
 {
   uint32_t ccdelta, usec, usec2, smc, scc, myCycCnt;
@@ -99,27 +101,36 @@ void loop() {
   uint32_t rrN = 0, ii = 0, usn, nn, loopTime;
   int stop = 0;
   Lcnt++;
-  if ( !(Lcnt % 3) ) {
-    // Change Clock Speed
+#ifdef CHANGE_SPEED
+  if ( !(Lcnt % 3) ) {      // Change Clock Speed
     ArmSpeed -= 100000000;
-    if ( ArmSpeed < 200000000 || F_CPU_ACTUAL < 200000000 ) ArmSpeed = 600000000;
+    if ( ArmSpeed < 10000000 ) ArmSpeed = 700000000;
+    set_arm_clock( ArmSpeed );
+    if ( F_CPU_ACTUAL < 100000000 ) ArmSpeed = 700000000;
     set_arm_clock( ArmSpeed );
   }
-#ifdef FIRST
-  print2l(">>> 1ms timer :FBit_micros >>> Clock Speed is:", F_CPU_ACTUAL);
-#else
-  print2l(">>> fast fake :FFit_micros >>> Clock Speed is:", F_CPU_ACTUAL);
 #endif
+#ifdef FIRST
+  print2(">>> 1ms timer :FBit_micros >>> Clock Speed is:", F_CPU_ACTUAL);
+#else
+  print2(">>> fast fake :FFit_micros >>> Clock Speed is:", F_CPU_ACTUAL);
+#endif
+  Serial.printf( "    °C=%2.2f\n" , tempmonGetTemp() );
   loopTime = millis();
   do {
     nn = 0;
-    usn = Nmicros();
+    usn = Nmicros(); // should be usn++ - but test logic can cause missed 1us
     do {
       rrN = Nmicros();
+#ifdef CHANGE_SPEED
+      if ( usn <= (rrN-1 ) && ( usn <= rrN+5 ) ) // extra us ticks missed slower speeds
+        nn++;
+#else
       if ( (usn + 1) == rrN )
         nn++;
-      else if ( (usn + 2) == rrN ) // in case an extra us tick is missed ?
+      else if ( ( (usn + 2) == rrN ) && 1 == Lcnt ) // extra us tick may miss loop#1 startup @600 MHz
         nn++;
+#endif
       else if ( rrN != usn ) // catch any out of order return
         stop = 666;
     } while ( 0 == nn && !stop );
@@ -134,11 +145,17 @@ void loop() {
   print2l( "\tlast New us: rrN=", rrN );
   print2( "\t\tStop Val: ", stop );
   print2l( "\tNested Loops: ", ii );
-  if ( rrN != (1 + usn)  || stop >= 10 )  print2l( "ERROR ERROR rrN != usn++  rrN:", rrN );
+  if ( rrN != (1 + usn)  || stop >= 10 )  {
+    print2l( "ERROR ERROR rrN != usn++  rrN:", rrN );
+    ErrFnd++;
+  }
   print2( "\tcurrent Millis: ", millis() );
   print2( "\tINTV_TIME: ", INTV_TIME );
   print2( "\tTotal Loops: ", Lcnt );
   loopTime = millis() - loopTime;
   print2l( "\tLoop time in ms=", loopTime );
+  if ( 0 != ErrFnd )  {
+    print2l( "\t# ERRORS Found:", ErrFnd );
+  }
   delay( 1000 );
 }
