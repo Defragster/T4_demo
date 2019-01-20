@@ -7,9 +7,6 @@
 
 #define CHANGE_SPEED // define to cycle the CPU speed
 uint32_t ArmSpeed = 600000000;
-volatile uint32_t it_millis_count = 0;
-volatile uint32_t it_cycle_count = 0;
-volatile uint32_t it_safe_read = 0; // ref var for __LDREXW/__STREXW
 
 // FrankB Demo :: https://forum.pjrc.com/threads/54711-Teensy-4-0-First-Beta-Test?p=195979&viewfull=1#post195979
 
