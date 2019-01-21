@@ -15,6 +15,8 @@
 #endif
 
 #define CHANGE_SPEED // define to cycle the CPU speed
+#define MAX_SPEED 800000000
+#define MIN_SPEED 100000000
 uint32_t ArmSpeed = 600000000;
 volatile uint32_t it_millis_count = 0;
 volatile uint32_t it_cycle_count = 0;
@@ -78,12 +80,14 @@ void it_systick_isr() { // REPLACES >> extern "C" void systick_isr(void)
 
 #define print2( a, b ) ({ Serial.print( a ); Serial.print( b ); })
 #define print2l( a, b ) ({ Serial.print( a ); Serial.println( b ); })
+extern "C" uint32_t set_arm_clock(uint32_t frequency);
 
 void setup() {
   pinMode(LED_BUILTIN, OUTPUT);
   digitalWrite( LED_BUILTIN, HIGH );
   while ( !Serial );
   Serial.println("\n" __FILE__ " " __DATE__ " " __TIME__);
+  set_arm_clock( ArmSpeed );
   uint32_t dtime = ARM_DWT_CYCCNT;
   ITtest.begin( it_systick_isr, INTV_TIME );
   for ( uint32_t ii = 0; ii < 10000; ii++) {
@@ -94,18 +98,17 @@ void setup() {
   print2l("\t100K micros. Took cycles# ", dtime);
 }
 
-extern "C" uint32_t set_arm_clock(uint32_t frequency);
 uint32_t Lcnt = 0;
 void loop() {
-  uint32_t rrN = 0, ii = 0, usn, nn, loopTime;
+  uint32_t rrN = 0, ii = 0, usn, nn, loopTime, dd;
   int stop = 0;
   Lcnt++;
 #ifdef CHANGE_SPEED
-  if ( !(Lcnt % 3) ) {      // Change Clock Speed
+  if ( !(Lcnt % 2) ) {      // Change Clock Speed
     ArmSpeed -= 100000000;
-    if ( ArmSpeed < 10000000 ) ArmSpeed = 700000000;
+    if ( ArmSpeed < MIN_SPEED ) ArmSpeed = MAX_SPEED;
     set_arm_clock( ArmSpeed );
-    if ( F_CPU_ACTUAL < 100000000 ) ArmSpeed = 700000000;
+    if ( F_CPU_ACTUAL < MIN_SPEED ) ArmSpeed = MAX_SPEED;
     set_arm_clock( ArmSpeed );
   }
 #endif
@@ -121,16 +124,19 @@ void loop() {
     usn = Nmicros(); // should be usn++ - but test logic can cause missed 1us
     do {
       rrN = Nmicros();
+      dd = rrN - usn;
+      if ( dd == 0 ) ;
+      else if ( dd == 1 ) nn++;
 #ifdef CHANGE_SPEED
-      if ( usn <= (rrN-1 ) && ( usn <= rrN+5 ) ) // extra us ticks missed slower speeds
+      else if ( dd <= 2 ) // extra us ticks missed slower speeds
         nn++;
 #else
-      if ( (usn + 1) == rrN )
-        nn++;
-      else if ( ( (usn + 2) == rrN ) && 1 == Lcnt ) // extra us tick may miss loop#1 startup @600 MHz
+      else if ( dd <= 2 && 1 == Lcnt ) // extra us tick may miss loop#1 startup @600 MHz
         nn++;
 #endif
-      else if ( rrN != usn ) // catch any out of order return
+      else if ( dd >= (0 - 3) ) // catch any out of order return
+        stop = 777;
+      else // if ( 0 != dd ) // catch any out of order return
         stop = 666;
     } while ( 0 == nn && !stop );
     ii++;
@@ -139,6 +145,7 @@ void loop() {
     if ( !(ii % 100000) )   digitalWriteFast( LED_BUILTIN, !digitalReadFast( LED_BUILTIN ) );
   } while ( !stop );
 
+  loopTime = millis() - loopTime;
   if ( nn != 1 && !stop ) print2l( "Bad New us Val: nn=", nn );
   print2( "\tlast test New usn=", usn );
   print2l( "\tlast New us: rrN=", rrN );
@@ -151,10 +158,10 @@ void loop() {
   print2( "\tcurrent Millis: ", millis() );
   print2( "\tINTV_TIME: ", INTV_TIME );
   print2( "\tTotal Loops: ", Lcnt );
-  loopTime = millis() - loopTime;
-  print2l( "\tLoop time in ms=", loopTime );
+  digitalWrite( LED_BUILTIN, HIGH );
   if ( 0 != ErrFnd )  {
     print2l( "\t# ERRORS Found:", ErrFnd );
+    digitalWrite( LED_BUILTIN, LOW );
   }
   delay( 1000 );
 }
