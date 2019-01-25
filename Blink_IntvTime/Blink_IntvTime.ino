@@ -1,17 +1,19 @@
 // https://forum.pjrc.com/threads/54711-Teensy-4-0-First-Beta-Test?p=194174&viewfull=1#post194174
 
-#define HW_SERIAL Serial4 // pin 17 debug Tx only
+#define HW_SERIAL Serial1 // pin 17 debug Tx only
 
 IntervalTimer ITtest;
 volatile uint32_t jj = 0;
 
 void TimeSome() {
   jj++;
+//  asm("dsb");
 }
 char szAlpha[26][65];
 
 elapsedMillis noDelay;
 void setup() {
+  HW_SERIAL.begin( 115200 );
   HW_SERIAL.print( "  setup() millis=" );
   HW_SERIAL.println( millis() );
   pinMode(LED_BUILTIN, OUTPUT);
