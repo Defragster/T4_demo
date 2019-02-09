@@ -30,7 +30,7 @@ void HardwareSerial::flush(void)
     tail = tx_buffer_tail_;
     while (((port->WATER >> 8) & 0x7) < 4)
     {
-      bRetVal = true;
+      // bRetVal = true;
       if (head == tail) break;
       if (++tail >= tx_buffer_total_size_) tail = 0;
       if (tail < tx_buffer_size_) {
