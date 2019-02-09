@@ -1,0 +1,19 @@
+
+#include <Arduino.h>  // types and class define
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+extern Stream &DebSer; // Default USB
+#ifdef __cplusplus
+} // extern "C"
+#endif
+
+__attribute__((weak)) 
+void Debug_Dump(void)
+{
+	DebSer.print(" User Debug Dump default. Micros==");
+	DebSer.println(micros());
+  return;
+}
+

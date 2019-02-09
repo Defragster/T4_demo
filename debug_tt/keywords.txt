@@ -1,0 +1,12 @@
+assert_tt	KEYWORD2
+haltif_tt	KEYWORD2
+where_tt	KEYWORD2
+addr_tt	KEYWORD2
+deb_tt	KEYWORD2
+debBegin_tt	KEYWORD2
+debTraceShow_tt	KEYWORD2
+debTrace_tt	KEYWORD2
+debText_tt	KEYWORD2
+debTextH_tt	KEYWORD2
+debText2_tt	KEYWORD2
+DEBUG_SHOW	KEYWORD2
