@@ -72,7 +72,7 @@ void loop() {
     digitalWriteFast( LED_BUILTIN, !digitalReadFast( LED_BUILTIN) );
     while (Serial.available() > 0) {
       incomingByte = Serial.read();
-      HWSERIAL.println(incomingByte);
+      HWSERIAL.print(incomingByte);
     }
   }
   if (HWSERIAL.available() > 0) {
