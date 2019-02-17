@@ -65,7 +65,7 @@ void setup() {
   foo();
   where_tt( );
   deb_tt( 2, micros() );
-  GPT1_CNT = 5; // FAULT
+  // GPT1_CNT = 5; // FAULT
   assert_tt( 0 );
   addr_tt( setup );
   int ii;

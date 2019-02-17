@@ -67,5 +67,3 @@ deb_tt( a, b) :: Logs a setpoint in the storage array for the indicated value a 
 debBegin_tt :: Provides needed Begin values for the library
 debTraceShow_tt :: Trace the trace log 
 debTrace_tt :: Records a Trace entry
-
-posted Forum link: https://forum.pjrc.com/threads/54711-Teensy-4-0-First-Beta-Test?p=197760&viewfull=1#post197760

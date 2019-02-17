@@ -24,13 +24,13 @@ rem
 REM defragster was here 
 
 set model=teensy4b
-set speed=600
+set speed=396000000
 set opt=o2std
 set usb=serial
 cd.
 
 rem set keys=de-de
-set keys=US_ENGLISH
+set keys=en-us
 
 
 rem *******************************
@@ -65,9 +65,7 @@ echo Building Sketch: %ino%
 
 if not "%1"=="0" (
   if "%errorlevel%"=="0" "%TyTools%\TyCommanderC.exe" upload --autostart --wait --multi "%temp1%\%sketchname%.%model%.hex"
+  rem "%arduino%\hardware\tools\arm\bin\arm-none-eabi-gcc-nm.exe" "%temp1%\%sketchname%.elf" -n | "T:\Programs\TSet\imxrt-size.exe"
 )
 
-
-
-
-
+exit %errorlevel%

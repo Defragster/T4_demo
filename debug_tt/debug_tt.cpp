@@ -18,14 +18,18 @@ HardwareSerial *pdbser2 = (HardwareSerial *)&Serial; // BUGBUG - this is either 
 #define faultPrintf( a, b ) { if(pdbser1) {pdbser1->printf( a, b ); pdbser1->flush(); delayMicroseconds(100); pdbser1->flush(); } }
 #define faultPrint( a ) { if(pdbser1) {pdbser1->print( a ); pdbser1->flush(); delayMicroseconds(100); pdbser1->flush(); } }
 #else
-#define faultPrintf( a, b ) { if(pdbser1) {pdbser1->printf( a, b ); }
-#define faultPrint( a ) { if(pdbser1) {pdbser1->print( a ); }
+#define faultPrintf( a, b ) { if(pdbser1) {pdbser1->printf( a, b ); } }
+#define faultPrint( a ) { if(pdbser1) {pdbser1->print( a ); } }
 #endif
 
 // debugprint.c :: LPUART3_BAUD = LPUART_BAUD_OSR(12) | LPUART_BAUD_SBR(1); // 1843200 baud // SERIAL_tt.begin( 1843200 );
 
 
 /*
+  >> DEBUG_BREAK versus _FAULT !!!!
+  >> Change text presented and LED blink rate
+  >> Use consitent Print Func? Map to clone of PJRC printf_debug - but send string to pdbser1-> unless faulted?
+
   Fast log calls save data and location, time stamp?
   incrment on each log call 0-63 ++&0x3f
   log_tt (vala, b, c) Store a, b, c and line# : can be timestamp millis/micros/CycCnt
@@ -294,7 +298,7 @@ void debtt_isr() {
 }
 
 // Call with param of &Serial, NO_BLINK without blink or else Pin_#,
-extern "C" uint16_t debBegin_tt(  HardwareSerial *pserial, uint16_t DoBlink, uint32_t DoIsr ) {
+uint16_t debBegin_tt(  HardwareSerial *pserial, uint16_t DoBlink, uint32_t DoIsr ) {
   _DoBlink = DoBlink;
   if ( _DoBlink != NO_BLINK )   pinMode( _DoBlink, OUTPUT ); // Must enable output to blink
   if ( DoIsr != NO_ISR ) attachInterrupt( DoIsr, debtt_isr, CHANGE);
@@ -469,7 +473,7 @@ void debug_fault( int iFrom )
     DebBack[ DLOG_SIZE * 2 ] = iFrom;
     if ( cnt > 0 ) cnt--;
   }
-  if ( DEBUG_HALTIF == iFrom ) {
+  else if ( DEBUG_HALTIF == iFrom ) {
     pdbser1->print(  "\n >>>> HALT If true  >>>> program Paused   "  );
     DebBack[ DLOG_SIZE * 2 ] = iFrom;
     if ( cnt > 0 ) cnt--;
@@ -481,20 +485,17 @@ void debug_fault( int iFrom )
     pdbser1->print(  "\n >>>> debug_fault   >>>> debug_fault   >>>> TYPE:"  );
     if ( iFrom <= MAX_FLT_ISR)
       pdbser1->println( _Ftype[ iFrom ] );
-    else if ( iFrom == DEBUG_ASSERT)
-      pdbser1->println( "ASSERT" );
     else
       pdbser1->println( iFrom );
     DebBack[ DLOG_SIZE * 2 ] = iFrom;
   }
-  pdbser1->println(  "Debug Info:"  );
+  pdbser1->print(  "debug_tt Info:"  );
   if ( 0 != lastL_tt && 0 != lastF_tt ) {
-    pdbser1->printf( "lastL_tt:%u", lastL_tt );
-    pdbser1->printf( "  lastF_tt:%s\n", lastF_tt );
+    pdbser1->printf( "/t [Last debug_tt helper() L#:%u", lastL_tt );
+    pdbser1->printf( "  f():%s", lastF_tt );
   }
+  pdbser1->println();
 
-// lastF_tt=__func__; lastL_tt=__LINE__;
-//__enable_irq();
   FlushPorts();
   for ( int ii = 0; ii < DLOG_SIZE; ii++ ) {
     if ( DebBack[ DLOG_SIZE + ii ] ) {
@@ -666,9 +667,6 @@ void debug_fault( int iFrom )
 void FlushPorts( void ) {
   DebugBlink( 100 );
   //if (_VectorsRam[IRQ_LPUART6 +16] != &unused_interrupt_vector) (*_VectorsRam[IRQ_LPUART6 +16])();
-  IRQHandler_Serial1();
-  IRQHandler_Serial2();
-  IRQHandler_Serial3();
 
 #ifndef __IMXRT1052__
   if (SIM_SCGC4 & SIM_SCGC4_USBOTG) usb_isr();
@@ -831,8 +829,12 @@ void resetReason( int resetReasonHw ) {
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+#if defined(__IMXRT1052__)
 #include "debug/printf.h"
 #undef printf
+#endif
+
 extern void systick_isr(void);
 extern volatile uint32_t systick_millis_count;
 #define printf_debug pdbser1->printf
@@ -840,9 +842,11 @@ extern volatile uint32_t systick_millis_count;
 void userDebugDumptt() {
   volatile unsigned int nn;
   pdbser1->flush();
-  faultPrint("\n userDebugDumptt() IN debug_tt  ___ \n");
+  faultPrint("\n userDebugDumptt() in debug_tt  ___ \n");
   pdbser1->flush();
+#if defined(__IMXRT1052__)
   faultPrintf("\n F_CPU=%u", F_CPU_ACTUAL );
+#endif
   systick_millis_count = 1;
   elapsedMicros systickEu = 0;
 
@@ -857,10 +861,12 @@ void userDebugDumptt() {
     pdbser1->flush();
     pdbser1->flush();
     pdbser1->flush();
-    GPIO2_DR_SET = (1 << 3); //digitalWrite(13, HIGH);
+    //GPIO2_DR_SET = (1 << 3); //
+    digitalWrite(13, HIGH);
     // digitalWrite(13, HIGH);
     for (nn = 0; nn < 10000000; nn++) ;
-    GPIO2_DR_CLEAR = (1 << 3); //digitalWrite(13, LOW);
+    //GPIO2_DR_CLEAR = (1 << 3); //
+    digitalWrite(13, LOW);
     // digitalWrite(13, LOW);
     pdbser1->flush();
     for (nn = 0; nn < 1800000; nn++) ;
@@ -875,13 +881,16 @@ void userDebugDumptt() {
       pdbser1->flush();
       faultPrintf(" @micros =%d" , micros());
       pdbser1->flush();
+#if defined(__IMXRT1052__)
       faultPrintf( "\tdeg  C=%2.2f\n" , tempmonGetTemp() );
+#endif
       pdbser1->flush();
     }
   }
 }
 
-extern "C" uint32_t set_arm_clock(uint32_t frequency);
+#if defined(__IMXRT1052__)
+uint32_t set_arm_clock(uint32_t frequency);
 
 void HardFault_HandlerC(unsigned int *hardfault_args) {
   volatile unsigned int stacked_r0 ;
@@ -967,6 +976,7 @@ void HardFault_HandlerC(unsigned int *hardfault_args) {
     for (nn = 0; nn < 18000000; nn++) ;
   }
 }
+#endif
 
 
 #ifdef __cplusplus
@@ -977,7 +987,6 @@ void HardFault_HandlerC(unsigned int *hardfault_args) {
 __attribute__((weak)) 
 void Debug_Dump(void)
 {
-  printf_debug(" User Debug Dump default. Micros==");
-  printf_debug("%u\n", micros());
+  printf_debug(" debug_tt (weak) default :: customize with 'void Debug_Dump()' in user code.");
   return;
 }
