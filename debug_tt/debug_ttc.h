@@ -4,13 +4,13 @@
 #define _debug_ttc_
 
 #ifndef NO_DEBUG_tt
+extern uint32_t lastL_tt;
+extern char * lastF_tt;
+
 #define assert_tt( a ) if (!(a)) { assert_ttf(__FILE__, __LINE__,  #a, __func__); lastF_tt=(char*)__func__; lastL_tt=__LINE__; }
 #define haltif_tt( a ) if ((a)) { haltif_ttf(__FILE__, __LINE__,  #a, __func__); lastF_tt=(char*)__func__; lastL_tt=__LINE__; }
 #define debTrace_tt( a, b, c ) { debTrace_ttf( (uint32_t) a, (uint32_t) b, (const char *) c, __LINE__, __func__); lastF_tt=(char*)__func__; lastL_tt=__LINE__; }
 #define deb_tt( a, b ) {debSet( a, (uint32_t)b, __LINE__, __func__ ); lastF_tt=(char*)__func__; lastL_tt=__LINE__; }
-
-extern uint32_t lastL_tt;
-extern char * lastF_tt;
 
 void debTraceShow_tt( int Max, const char *aa, const char *bb, const char *cc);
 
