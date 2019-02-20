@@ -1,9 +1,22 @@
 
+// #define NO_DEBUG_tt
+
 #ifndef _debug_tt_
 
 #define _debug_tt_
 
-//#define DEBUG_OFF
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+uint16_t debBegin_tt(  HardwareSerial *pserial, uint16_t DoBlink, uint32_t DoIsr );
+
+#include "debug_ttc.h"
+
+#ifdef __cplusplus
+} // extern "C"
+#endif
+
 
 #define NO_BLINK 255 // disable blink toggle
 #define NO_ISR 255 // disable blink toggle
@@ -12,8 +25,8 @@
 extern HardwareSerial *pdbser1;
 
 
-#define where_tt( ) { if(1) {int where_ii; pdbser1->print( __func__); pdbser1->print( __LINE__); pdbser1->print( "() stack var: " ); pdbser1->println ( (uint32_t)&where_ii,HEX ); lastF_tt=(char*)__func__; lastL_tt=__LINE__;} }
-#define addr_tt( a ) { pdbser1->print( #a); pdbser1->print( " addr: " ); pdbser1->println ( (uint32_t)a,HEX ); lastF_tt=(char*)__func__; lastL_tt=__LINE__; }
+#define where_tt( ) { if(1) {lastF_tt=(char*)__func__; lastL_tt=__LINE__; int where_ii; printf_tt( "in %s @L#%u", lastF_tt, lastL_tt ); printf_tt( "\tstack var addr: 0x%x\n", (uint32_t)&where_ii ); } }
+#define addr_tt( a ) { printf_tt( "Addr for %s is %x\n", (char*)#a, (uint32_t)a ); lastF_tt=(char*)__func__; lastL_tt=__LINE__; }
 
 
 // #define assert_ttx( a ) do {if (!a) { assert_ttf(__FILE__, __LINE__,  #a) } while(0)
@@ -28,17 +41,6 @@ extern void Debug_Dump(void);
 //#define qBlink() (GPIOC_PTOR = 32)  // Pin13 on T3.x & LC // requires: pinMode(LED_BUILTIN, OUTPUT);
 #define qBlink() digitalWriteFast( LED_BUILTIN, !digitalReadFast( LED_BUILTIN ) )
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
-uint16_t debBegin_tt(  HardwareSerial *pserial, uint16_t DoBlink, uint32_t DoIsr );
-
-#include "debug_ttc.h"
-
-#ifdef __cplusplus
-} // extern "C"
-#endif
 
 // #define XXX_YYY  do{ ii++ }while(0)
 // #define qBlinkT( a )  do{ (GPIOC_PTOR = 32) }while( a != digitalReadFast( LED_BUILTIN) )

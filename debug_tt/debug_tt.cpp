@@ -1,25 +1,27 @@
 #include <Arduino.h>  // types and class define
 #include "debug_tt.h"
 
-#ifndef DEBUG_OFF // to leave NULL macros and include NO CODE bring a local copy of debug_td.h and use _OFF ??
+#ifndef NO_DEBUG_tt
 
 // Macro #defines to map to USB for mk20dx128.c PJRC reg prints
 #define ser_print dbprint
 #define ser_print_hex32(a) dbprintH( a )
 
 HardwareSerial *pdbser1 = NULL;
-#define dbprint( a ) { if(pdbser1) {pdbser1->print( a );} }
-#define dbprintln( a ) { if(pdbser1) {pdbser1->println( a );} }
-#define dbprintH( a ) { if(pdbser1) {pdbser1->print( a, HEX );} }
-#define dbprFlush(  ) { if(pdbser1) {pdbser1->flush();} }
+//#define dbprint( a ) { printf_tt( a ); }
+//#define dbprintln( a ) { printf_tt( "%s\n", a ); }
+#define dbprintf( a , b ) { printf_tt( a, b ); }
+#define dbprintD( a ) { printf_tt( "%u", a ); }
+#define dbprintDln( a ) { printf_tt( "%u\n", a ); }
+#define dbprintH( a ) { printf_tt( "%x", a ); }
+//#define dbprintln( a ) { if(pdbser1) {pdbser1->println( a );} }
+//#define dbprFlush(  ) { if(pdbser1) {pdbser1->flush();} }
 HardwareSerial *pdbser2 = (HardwareSerial *)&Serial; // BUGBUG - this is either not used or needs to be set by user - but helps debugging the debug library
 
 #if defined(__IMXRT1052__)
-#define faultPrintf( a, b ) { if(pdbser1) {pdbser1->printf( a, b ); pdbser1->flush(); delayMicroseconds(100); pdbser1->flush(); } }
-#define faultPrint( a ) { if(pdbser1) {pdbser1->print( a ); pdbser1->flush(); delayMicroseconds(100); pdbser1->flush(); } }
+#define faultPrintf( a, b ) { printf_tt( a, b ); }
 #else
-#define faultPrintf( a, b ) { if(pdbser1) {pdbser1->printf( a, b ); } }
-#define faultPrint( a ) { if(pdbser1) {pdbser1->print( a ); } }
+#define faultPrintf( a, b ) { printf_tt( a, b ); }
 #endif
 
 // debugprint.c :: LPUART3_BAUD = LPUART_BAUD_OSR(12) | LPUART_BAUD_SBR(1); // 1843200 baud // SERIAL_tt.begin( 1843200 );
@@ -98,16 +100,16 @@ void debTraceShow_tt( int Max, const char *aa, const char *bb, const char *cc) {
     if ( TraceIndex > 0) {
       for ( ii = TraceIndex - 1; ii >= 0 && jj < kk && jj < Max; ii--) {
         jj++;
-        faultPrintf( "#%u: ", jj );
+        printf_tt( "#%u: ", jj );
         //faultPrintf( "(ii=%u): ", ii );
         faultPrintf( aa, TraceInfo[ ii ][0] );
         faultPrintf( bb, TraceInfo[ ii ][1] );
         faultPrintf( cc, (char *)TraceInfo[ ii ][2] );
-        faultPrintf( "\tin F():%s ", (char *)TraceInfo[ ii ][4] );
+        faultPrintf( "\tin %s() ", (char *)TraceInfo[ ii ][4] );
 //        faultPrintf( "\tin %s() ", (char *)TraceInfo[ ii ][4] );
-        faultPrintf( "[ii:%u]",  ii );
-        faultPrintf( "l#:%u\n", TraceInfo[ ii ][3] );
-        delayMicroseconds( 30 );
+// DEBUG FIFO loop #        faultPrintf( "[ii:%u]",  ii );
+        faultPrintf( "L#:%u\n", TraceInfo[ ii ][3] );
+        // delayMicroseconds( 30 );
       }
     }
     if ( kk > TraceIndex ) {
@@ -118,10 +120,10 @@ void debTraceShow_tt( int Max, const char *aa, const char *bb, const char *cc) {
         faultPrintf( aa, TraceInfo[ ii ][0] );
         faultPrintf( bb, TraceInfo[ ii ][1] );
         faultPrintf( cc, (char *)TraceInfo[ ii ][2] );
-        faultPrintf( "\tin F():%s ", (char *)TraceInfo[ ii ][4] );
-        faultPrintf( "[ii:%u]",  ii );
-        faultPrintf( "l#:%u\n", TraceInfo[ ii ][3] );
-        delayMicroseconds( 30 );
+        faultPrintf( "\tin %s() ", (char *)TraceInfo[ ii ][4] );
+// DEBUG FIFO loop #        faultPrintf( "[ii:%u]",  ii );
+        faultPrintf( "L#:%u\n", TraceInfo[ ii ][3] );
+        // delayMicroseconds( 30 );
       }
     }
     TraceOn = WasTraceOn;
@@ -250,7 +252,7 @@ static int16_t _DoBlink = LED_BUILTIN; // default Teensy pin 13
 // >>>>>   tested:
 // Power on note of last shutdown reason?
 // On Halt - allow ZERO of log data
-// #define DEBUG_OFF that renders all the statements NULL for 'normal' compile, w/fault catch.
+// #define NO_DEBUG_tt that renders all the statements NULL for 'normal' compile, w/fault catch.
 // Make Blink pause function with FlushPorts() assure AutoProgram
 // User call to debug_fault( DEBUG_SHOW ) to just display the index call ist
 //  >> or deb_tt( ii, # ) with index ii >= than DLOG_SIZE
@@ -354,58 +356,54 @@ void _reboot_Teensyduino_(void) { asm("bkpt #251"); }
 void assert_ttf(const char *__file, int __lineno, const char *__sexp, const char *__func) {
   // transmit diagnostic information through serial link.
   last_func = __func;
-  dbprFlush();
-  int pp = 1000;
   DebugBlink( 0 );
+#if 0
+  int pp = 1000;
   while ( pp ) {
     FlushPorts();
     pp--;
   }
-  dbprint(" ___ ASSERT FAILED ___ FILE >> ");
-  dbprintln(__file);
-  dbprint(" ___ in function >> ");
-  dbprFlush();
-  dbprint(__func);
-  dbprint("()  at LINE# >> ");
-  dbprintln(__lineno);
-  dbprint(" Expression >> ");
-  dbprintln(__sexp);
-  dbprFlush();
+#endif
+  printf_tt(" ___ ASSERT FAILED ___ FILE >> ");
+  printf_tt("%s\n", __file);
+  printf_tt(" ___ in function >> %s()", __func);
+  printf_tt(" at LINE# >> %u", __lineno);
+  printf_tt(" Expression >> (%s)\n", __sexp);
+//BUGBUG print
   debug_fault( DEBUG_ASSERT ); // call fault code to dump registers
-  // abort program execution.
-  dbprintln(" ___ ASSERT FAILED ___ 'y' to continue ...");
-  dbprFlush();
-  dbprintln("\t 'd' to call Debug_Dump()");
-  dbprintln("\t 'b' Teensy Bootloader");
-  dbprintln("\t 'r' Restart Teensy");
-  dbprintln("\t 'z' Zero Debug logs");
-  dbprFlush();
+  // PAUSE program execution.
+  printf_tt(" ___ ASSERT FAILED ___ 'y' to continue ...\n");
+  printf_tt("\t 'd' to call Debug_Dump()\n");
+  printf_tt("\t 'b' Teensy Bootloader\n");
+  printf_tt("\t 'r' Restart Teensy\n");
+  printf_tt("\t 'z' Zero Debug logs\n");
   DebugBlink( 0 );
   bool _wait = true;
   char foo;
   while (pdbser1->read() != -1) ; // Make sure queue is empty.
   while ( _wait ) {
-    FlushPorts();
+//xxx    FlushPorts();
     DebugBlink( 125 );
     while ( pdbser1->available() ) {
       DebugBlink( 100 );
       foo = pdbser1->read();
       if ( 'y' == foo ) _wait = false;
-      if ( 'd' == foo ) Debug_Dump();
-      if ( 'b' == foo ) _reboot_Teensyduino_(); // goes to bootloader
-      if ( 'r' == foo ) CPU_RESTART; // restart CPU
-      if ( 'z' == foo ) {
+      else if ( 'd' == foo ) Debug_Dump();
+      else if ( 'b' == foo ) _reboot_Teensyduino_(); // goes to bootloader
+      else if ( 'r' == foo ) { CPU_RESTART; } // restart CPU
+      else if ( 'z' == foo ) 
+      {
         for ( int ii = 0; ii < DLOG_SIZE; ii++ ) {
           DebCnt = 0;
           DebInfo[ ii ] = 0;
           DebBack[ DLOG_SIZE + ii ] = 0;
           DebBack[ ii ] = 0;
-          dbprFlush();
         }
       }
     }
-    while (pdbser1->read() != -1) ; // Make sure queue is empty.
+    // while (pdbser1->read() != -1) ; // Make sure queue is empty.
   }
+  printf_tt("end ASSERT\n");
 }
 
 
@@ -458,7 +456,7 @@ void haltif_ttf(const char *__file, int __lineno, const char *__sexp, const char
       }
     }
   }
-  pdbser1->println("end Halt");
+  printf_tt("end Halt\n");
 }
 
 void debug_fault( int iFrom )
@@ -466,62 +464,52 @@ void debug_fault( int iFrom )
   inDF_tt = 1;
   if ( _DoBlink != NO_BLINK) digitalWrite( _DoBlink, !digitalRead(_DoBlink));
   static int cnt = 0;
-  FlushPorts();
 
   if ( DEBUG_ASSERT == iFrom ) {
-    pdbser1->print(  "\n >>>> ASSERT  >>>> ASSERT FAILED   "  );
+    printf_tt(  "\n >>>> ASSERT  >>>> ASSERT FAILED   "  );
     DebBack[ DLOG_SIZE * 2 ] = iFrom;
     if ( cnt > 0 ) cnt--;
   }
   else if ( DEBUG_HALTIF == iFrom ) {
-    pdbser1->print(  "\n >>>> HALT If true  >>>> program Paused   "  );
+    printf_tt(  "\n >>>> HALT If true  >>>> program Paused   "  );
     DebBack[ DLOG_SIZE * 2 ] = iFrom;
     if ( cnt > 0 ) cnt--;
   }
   else if ( DEBUG_SHOW == iFrom ) {
-    pdbser1->print(  "\n #### Debug trace Show "  );
+    printf_tt(  "\n #### Debug trace Show "  );
   }
   else {
-    pdbser1->print(  "\n >>>> debug_fault   >>>> debug_fault   >>>> TYPE:"  );
+    FlushPorts();
+    printf_tt(  "\n >>>> debug_fault   >>>> debug_fault   >>>> TYPE:"  );
     if ( iFrom <= MAX_FLT_ISR)
-      pdbser1->println( _Ftype[ iFrom ] );
+      printf_tt( "%s\n", _Ftype[ iFrom ] );
     else
-      pdbser1->println( iFrom );
+      printf_tt( "%u", iFrom );
     DebBack[ DLOG_SIZE * 2 ] = iFrom;
   }
-  pdbser1->print(  "debug_tt Info:"  );
+  printf_tt(  "debug_tt Info:"  );
   if ( 0 != lastL_tt && 0 != lastF_tt ) {
-    pdbser1->printf( "/t [Last debug_tt helper() L#:%u", lastL_tt );
-    pdbser1->printf( "  f():%s", lastF_tt );
+    printf_tt( "\t[Last debug_tt helper @ L#:%u  %s()", lastL_tt, lastF_tt );
   }
-  pdbser1->println();
+  printf_tt("\n");
 
   FlushPorts();
   for ( int ii = 0; ii < DLOG_SIZE; ii++ ) {
     if ( DebBack[ DLOG_SIZE + ii ] ) {
-      pdbser1->print(  ii  );
-      pdbser1->print(  " => "  );
-      pdbser1->print( DebInfo[ ii ] );
-      pdbser1->print(  "\t0x"  );
-      pdbser1->print( DebInfo[ ii ], HEX );
-      pdbser1->print(  "\t[L#"  );
-      pdbser1->print( DebBack[ ii ] );
-      pdbser1->print(  "_C#"  );
-      pdbser1->print( DebBack[ DLOG_SIZE + ii ] );
+      printf_tt(  "%u => %u", ii, DebInfo[ ii ]  );
+      printf_tt(  "\t%x", DebInfo[ ii ] );
+      printf_tt(  "\t[L#%u", DebBack[ ii ] );
+      printf_tt(  "_C#%u", DebBack[ DLOG_SIZE + ii ] );
       FlushPorts();
       if ( DebCnt ==  DebBack[ DLOG_SIZE + ii ]) {
-        pdbser1->print(  " _<< last func::"  );
-        pdbser1->print(  last_func  );
+        printf_tt(  " _<< last func:: %s()", last_func  );
       }
-      pdbser1->println();
+      printf_tt( "\n");
     }
     FlushPorts();
   }
-  if ( DEBUG_T4 == iFrom && (HardwareSerial*)&Serial != pdbser1 ) { // Special case from T4 Fault to push output - BUGBUG Serial# stalls
-    pdbser1->flush(); delayMicroseconds(100); pdbser1->flush();
-  }
   FlushPorts();
-  if ( DEBUG_SHOW == iFrom ) {
+  if ( iFrom > MAX_FLT_ISR) {
     inDF_tt = 0;
     return;
   }
@@ -536,48 +524,35 @@ void debug_fault( int iFrom )
   UART0_BDL = 26; // 115200 at 48 MHz
   UART0_C2 = UART_C2_TE;
   PORTB_PCR17 = PORT_PCR_MUX(3);
-  ser_print("\nfault: \n??: ");
+  printf_tt("\nfault: \n??: ");
   asm("ldr %0, [sp, #52]" : "=r" (addr) ::);
-  ser_print_hex32(addr);
-  ser_print("\t\t??: ");
+  printf_tt("%x\t\t??: ", addr);
   asm("ldr %0, [sp, #48]" : "=r" (addr) ::);
-  ser_print_hex32(addr);
-  ser_print("\t\t??: ");
+  printf_tt("%x\t\t??: ", addr);
   asm("ldr %0, [sp, #44]" : "=r" (addr) ::);
-  ser_print_hex32(addr);
-  ser_print("\n\tpsr:");
+  printf_tt("%x\npsr: ", addr);
   asm("ldr %0, [sp, #40]" : "=r" (addr) ::);
-  ser_print_hex32(addr);
-  ser_print("\tadr:");
+  printf_tt("%x\t\tadr: ", addr);
   asm("ldr %0, [sp, #36]" : "=r" (addr) ::);
-  ser_print_hex32(addr);
-  ser_print("\nlr: ");
+  printf_tt("%x\t\tlr: ", addr);
   asm("ldr %0, [sp, #32]" : "=r" (addr) ::);
-  ser_print_hex32(addr);
-  ser_print("\t\tr12:");
+  printf_tt("%x\nr12: ", addr);
   asm("ldr %0, [sp, #28]" : "=r" (addr) ::);
-  ser_print_hex32(addr);
-  ser_print("\t\tr3: ");
+  printf_tt("%x\t\tr3: ", addr);
   asm("ldr %0, [sp, #24]" : "=r" (addr) ::);
-  ser_print_hex32(addr);
-  ser_print("\nr2: ");
+  printf_tt("%x\nr2: ", addr);
   asm("ldr %0, [sp, #20]" : "=r" (addr) ::);
-  ser_print_hex32(addr);
-  ser_print("\t\tr1: ");
+  printf_tt("%x\nr1: ", addr);
   asm("ldr %0, [sp, #16]" : "=r" (addr) ::);
-  ser_print_hex32(addr);
-  ser_print("\t\tr0: ");
+  printf_tt("%x\nr0: ", addr);
   asm("ldr %0, [sp, #12]" : "=r" (addr) ::);
-  ser_print_hex32(addr);
-  ser_print("\nr4: ");
+  printf_tt("%x\nr4: ", addr);
   asm("ldr %0, [sp, #8]" : "=r" (addr) ::);
-  ser_print_hex32(addr);
-  ser_print("\t\tlr: ");
+  printf_tt("%x\nlr: ", addr);
   asm("ldr %0, [sp, #4]" : "=r" (addr) ::);
-  ser_print_hex32(addr);
-  ser_print("\n");
+  printf_tt("%x\n", addr);
   asm("ldr %0, [sp, #0]" : "=r" (addr) ::);
-  pdbser1->println( "---\n" );
+  printf_tt( "---\n" );
 #ifndef __MKL26Z64__ // T_LC exclude 
   if ( iFrom > 0 && iFrom <= MAX_FLT_ISR ) {
     uint32_t *test = (uint32_t *)0xe000ed28;
@@ -587,7 +562,7 @@ void debug_fault( int iFrom )
     FlushPorts();
     for ( tii = 0; tii < 6; tii++ ) {
       FlushPorts();
-      pdbser1->print( _Freg[tii] ); pdbser1->println( test[tii], HEX);
+      printf_tt( "%s :: %x\n", _Freg[tii], test[tii] );
       FlushPorts();
     }
   }
@@ -603,29 +578,13 @@ void debug_fault( int iFrom )
   if ( _DoBlink != NO_BLINK) digitalWrite( _DoBlink, !digitalRead(_DoBlink));
   if ( cnt >= 1 ) {
     if ( iFrom <= MAX_FLT_ISR ) {
-      pdbser1->print(  "\n >>>> debug_fault   >>>> TYPE:"  );
-      if ( DEBUG_T4 == iFrom && (HardwareSerial*)&Serial != pdbser1 ) { // Special case from T4 Fault to push output - BUGBUG Serial# stalls
-        pdbser1->flush(); delayMicroseconds(100); pdbser1->flush();
-      }
-      pdbser1->println( _Ftype[ iFrom ] );
-      if ( DEBUG_T4 == iFrom && (HardwareSerial*)&Serial != pdbser1 ) { // Special case from T4 Fault to push output - BUGBUG Serial# stalls
-        pdbser1->flush(); delayMicroseconds(100); pdbser1->flush();
-      }
+      printf_tt(  "\n >>>> debug_fault   >>>> TYPE:%s", _Ftype[ iFrom ] );
     }
-    pdbser1->println( "\n--- Halting >>>>  'y' to continue ...");
-    if ( DEBUG_T4 == iFrom && (HardwareSerial*)&Serial != pdbser1 ) { // Special case from T4 Fault to push output - BUGBUG Serial# stalls
-      pdbser1->flush(); delayMicroseconds(100); pdbser1->flush();
-    }
-    pdbser1->println("\t 'd' to call Debug_Dump()");
-    if ( DEBUG_T4 == iFrom && (HardwareSerial*)&Serial != pdbser1 ) { // Special case from T4 Fault to push output - BUGBUG Serial# stalls
-      pdbser1->flush(); delayMicroseconds(100); pdbser1->flush();
-    }
-    pdbser1->println("\t 'b' Teensy Bootloader");
-    pdbser1->println("\t 'r' Restart Teensy");
-    pdbser1->println("\t 'z' Zero Debug logs");
-    if ( DEBUG_T4 == iFrom && (HardwareSerial*)&Serial != pdbser1 ) { // Special case from T4 Fault to push output - BUGBUG Serial# stalls
-      pdbser1->flush(); delayMicroseconds(100); pdbser1->flush();
-    }
+    printf_tt( "\n--- Faulted >>>>  'y' to continue ...\n");
+    printf_tt("\t 'd' to call Debug_Dump()\n");
+    printf_tt("\t 'b' Teensy Bootloader\n");
+    printf_tt("\t 'r' Restart Teensy\n");
+    printf_tt("\t 'z' Zero Debug logs\n");
     bool _wait = true;
     char foo;
     while (pdbser1->read() != -1) ; // Make sure queue is empty.
@@ -636,16 +595,10 @@ void debug_fault( int iFrom )
         DebugBlink( 100 );
         foo = pdbser1->read();
         if ( 'y' == foo ) _wait = false;
-        if ( 'd' == foo ) Debug_Dump();
-        if ( DEBUG_T4 == iFrom && (HardwareSerial*)&Serial != pdbser1 ) { // Special case from T4 Fault to push output - BUGBUG Serial# stalls
-          pdbser1->flush(); delayMicroseconds(100); pdbser1->flush();
-        }
-        if ( 'b' == foo ) _reboot_Teensyduino_(); // goes to bootloader
-        if ( 'r' == foo ) CPU_RESTART; // restart CPU
-        if ( DEBUG_T4 == iFrom && (HardwareSerial*)&Serial != pdbser1 ) { // Special case from T4 Fault to push output - BUGBUG Serial# stalls
-          pdbser1->flush(); delayMicroseconds(100); pdbser1->flush();
-        }
-        if ( 'z' == foo ) {
+        else if ( 'd' == foo ) Debug_Dump();
+        else if ( 'b' == foo ) _reboot_Teensyduino_(); // goes to bootloader
+        else if ( 'r' == foo ) { CPU_RESTART; }  // restart CPU
+        else if ( 'z' == foo ) {
           for ( int ii = 0; ii < DLOG_SIZE; ii++ ) {
             DebCnt = 0;
             DebInfo[ ii ] = 0;
@@ -654,18 +607,17 @@ void debug_fault( int iFrom )
           }
         }
       }
-      if ( DEBUG_T4 == iFrom && (HardwareSerial*)&Serial != pdbser1 ) { // Special case from T4 Fault to push output - BUGBUG Serial# stalls
-        pdbser1->flush(); delayMicroseconds(100); pdbser1->flush();
-      }
     }
   }
+  printf_tt("end Fault\n");
   inDF_tt = 0;
   return;
 }
 
-
+// BUGBUG - PASS PARAM #1 - indicate when FAULT or just standard output loop
 void FlushPorts( void ) {
   DebugBlink( 100 );
+  return; // BUGBUG
   //if (_VectorsRam[IRQ_LPUART6 +16] != &unused_interrupt_vector) (*_VectorsRam[IRQ_LPUART6 +16])();
 
 #ifndef __IMXRT1052__
@@ -775,7 +727,7 @@ void resetReason( int resetReasonHw ) {
 } // extern "C"
 #endif
 
-#endif // #ifndef DEBUG_OFF
+#endif // #ifndef NO_DEBUG_tt
 
 
 
@@ -830,10 +782,12 @@ void resetReason( int resetReasonHw ) {
 extern "C" {
 #endif
 
+/*
 #if defined(__IMXRT1052__)
 #include "debug/printf.h"
 #undef printf
 #endif
+*/
 
 extern void systick_isr(void);
 extern volatile uint32_t systick_millis_count;
@@ -842,7 +796,7 @@ extern volatile uint32_t systick_millis_count;
 void userDebugDumptt() {
   volatile unsigned int nn;
   pdbser1->flush();
-  faultPrint("\n userDebugDumptt() in debug_tt  ___ \n");
+  faultPrintf("\n userDebugDumptt() in debug_tt  ___ \n", 0);
   pdbser1->flush();
 #if defined(__IMXRT1052__)
   faultPrintf("\n F_CPU=%u", F_CPU_ACTUAL );
@@ -858,9 +812,6 @@ void userDebugDumptt() {
       systickEu -= 1000;
       systick_isr();
     }
-    pdbser1->flush();
-    pdbser1->flush();
-    pdbser1->flush();
     //GPIO2_DR_SET = (1 << 3); //
     digitalWrite(13, HIGH);
     // digitalWrite(13, HIGH);
@@ -984,7 +935,7 @@ void HardFault_HandlerC(unsigned int *hardfault_args) {
 #endif
 
 
-__attribute__((weak)) 
+__attribute__((weak))
 void Debug_Dump(void)
 {
   printf_debug(" debug_tt (weak) default :: customize with 'void Debug_Dump()' in user code.");

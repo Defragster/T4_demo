@@ -1,11 +1,15 @@
 
 
+// #define NO_DEBUG_tt
+
 #ifndef _debug_ttc_
 #define _debug_ttc_
 
 #ifndef NO_DEBUG_tt
 extern uint32_t lastL_tt;
 extern char * lastF_tt;
+
+extern "C" void printf_tt(const char *format, ...);
 
 #define assert_tt( a ) if (!(a)) { assert_ttf(__FILE__, __LINE__,  #a, __func__); lastF_tt=(char*)__func__; lastL_tt=__LINE__; }
 #define haltif_tt( a ) if ((a)) { haltif_ttf(__FILE__, __LINE__,  #a, __func__); lastF_tt=(char*)__func__; lastL_tt=__LINE__; }
@@ -26,6 +30,7 @@ void debug_fault( int iFrom );
 void resetReason( int resetReasonHw );
 
 #else
+#define printf_tt(...)
 #define assert_tt( a ) 
 #define haltif_tt( a ) 
 #define debTrace_tt( a, b, c ) 
