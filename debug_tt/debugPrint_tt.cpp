@@ -35,6 +35,7 @@ void printf_tt(const char *format, ...);
 
 void putchar_tt(char c);
 static void puint_debug_tt(unsigned int num);
+extern uint32_t inFault_tt;
 
 
 __attribute__((section(".progmem")))
@@ -43,7 +44,7 @@ void printf_tt(const char *format, ...)
 	va_list args;
 	unsigned int val;
 	int n;
- {
+	{
 
 		va_start(args, format);
 		for (; *format != 0; format++) { // no-frills stand-alone printf
@@ -103,6 +104,7 @@ static void puint_debug_tt(unsigned int num)
 #if defined(__IMXRT1052__)
 #include "imxrt.h"
 
+/*
 __attribute__((section(".progmem")))
 void printf_tt_init(void)
 {
@@ -112,21 +114,29 @@ void printf_tt_init(void)
 	LPUART3_BAUD = LPUART_BAUD_OSR(12) | LPUART_BAUD_SBR(1);	// 1843200 baud
 	LPUART3_CTRL = LPUART_CTRL_TE;
 }
+- manual port init ala PJRC :: bugbug */
 #endif
 
+extern "C" void FlushPorts( void );
 
 __attribute__((section(".progmem")))
 void putchar_tt(char c)
 {
 #if defined(__IMXRT1052__)
-	while (!(LPUART3_STAT & LPUART_STAT_TDRE)) ; // wait
-	LPUART3_DATA = c;
-		// HANDLE T4 FAULT PUSH HERE
-        //if ( DEBUG_T4 == iFrom && (HardwareSerial*)&Serial != pdbser1 ) { // Special case from T4 Fault to push output - BUGBUG Serial# stalls
-        //  pdbser1->flush(); delayMicroseconds(100); pdbser1->flush();
-        //}
+	// HANDLE T4 FAULT PUSH HERE
+	/*
+	if ( 0 != inFault_tt && (HardwareSerial*)&Serial4 == pdbser1 ) { // Special case from T4 Fault to push output - BUGBUG Serial# stalls
+		while (!(LPUART3_STAT & LPUART_STAT_TDRE)) ; // wait
+		LPUART3_DATA = c;
+	} */
+	pdbser1->print( c );
+	if ( (HardwareSerial*)&Serial != pdbser1 ) { // Special case from T4 Fault to push output - BUGBUG Serial# stalls
+		pdbser1->flush(); //delayMicroseconds(100); pdbser1->flush(); // BUGBUG - requires custom Serial CORES code in FLUSH
+	}
 #else
 	pdbser1->print( c );
+	if ( 0 != inFault_tt )
+		FlushPorts( ); // PJRC keep Alive Code when faulted
 #endif
 }
 

@@ -18,11 +18,13 @@ HardwareSerial *pdbser1 = NULL;
 //#define dbprFlush(  ) { if(pdbser1) {pdbser1->flush();} }
 HardwareSerial *pdbser2 = (HardwareSerial *)&Serial; // BUGBUG - this is either not used or needs to be set by user - but helps debugging the debug library
 
+/*
 #if defined(__IMXRT1052__)
 #define faultPrintf( a, b ) { printf_tt( a, b ); }
 #else
 #define faultPrintf( a, b ) { printf_tt( a, b ); }
 #endif
+*/
 
 // debugprint.c :: LPUART3_BAUD = LPUART_BAUD_OSR(12) | LPUART_BAUD_SBR(1); // 1843200 baud // SERIAL_tt.begin( 1843200 );
 
@@ -58,6 +60,7 @@ volatile int TraceCnt = 0;
 volatile bool TraceOn = true;
 uint32_t lastL_tt = 0;
 char * lastF_tt = 0;
+uint32_t inFault_tt = 0;
 
 // CALL TRACEshow from debug_tt break
 // pass -1 == MAX to stop log
@@ -102,27 +105,27 @@ void debTraceShow_tt( int Max, const char *aa, const char *bb, const char *cc) {
         jj++;
         printf_tt( "#%u: ", jj );
         //faultPrintf( "(ii=%u): ", ii );
-        faultPrintf( aa, TraceInfo[ ii ][0] );
-        faultPrintf( bb, TraceInfo[ ii ][1] );
-        faultPrintf( cc, (char *)TraceInfo[ ii ][2] );
-        faultPrintf( "\tin %s() ", (char *)TraceInfo[ ii ][4] );
+        printf_tt( aa, TraceInfo[ ii ][0] );
+        printf_tt( bb, TraceInfo[ ii ][1] );
+        printf_tt( cc, (char *)TraceInfo[ ii ][2] );
+        printf_tt( "\tin %s() ", (char *)TraceInfo[ ii ][4] );
 //        faultPrintf( "\tin %s() ", (char *)TraceInfo[ ii ][4] );
 // DEBUG FIFO loop #        faultPrintf( "[ii:%u]",  ii );
-        faultPrintf( "L#:%u\n", TraceInfo[ ii ][3] );
+        printf_tt( "L#:%u\n", TraceInfo[ ii ][3] );
         // delayMicroseconds( 30 );
       }
     }
     if ( kk > TraceIndex ) {
       for ( ii = DTRACE_SIZE - 1; ii >= TraceIndex && jj < kk && jj < Max; ii--) {
         jj++;
-        faultPrintf( "#_%u: ", jj );
+        printf_tt( "#_%u: ", jj );
         //faultPrintf( "(ii=%u): ", ii );
-        faultPrintf( aa, TraceInfo[ ii ][0] );
-        faultPrintf( bb, TraceInfo[ ii ][1] );
-        faultPrintf( cc, (char *)TraceInfo[ ii ][2] );
-        faultPrintf( "\tin %s() ", (char *)TraceInfo[ ii ][4] );
+        printf_tt( aa, TraceInfo[ ii ][0] );
+        printf_tt( bb, TraceInfo[ ii ][1] );
+        printf_tt( cc, (char *)TraceInfo[ ii ][2] );
+        printf_tt( "\tin %s() ", (char *)TraceInfo[ ii ][4] );
 // DEBUG FIFO loop #        faultPrintf( "[ii:%u]",  ii );
-        faultPrintf( "L#:%u\n", TraceInfo[ ii ][3] );
+        printf_tt( "L#:%u\n", TraceInfo[ ii ][3] );
         // delayMicroseconds( 30 );
       }
     }
@@ -317,6 +320,8 @@ uint16_t debBegin_tt(  HardwareSerial *pserial, uint16_t DoBlink, uint32_t DoIsr
     resetReason( resetReasonHw );
     pdbser1->print( "F_CPU==");
 #if defined(__IMXRT1052__)
+    pdbser1->print( F_CPU_ACTUAL);
+    pdbser1->print( "   F_BUS==");
     pdbser1->print( F_BUS_ACTUAL);
 #else
     pdbser1->print( F_CPU);
@@ -391,7 +396,7 @@ void assert_ttf(const char *__file, int __lineno, const char *__sexp, const char
       else if ( 'd' == foo ) Debug_Dump();
       else if ( 'b' == foo ) _reboot_Teensyduino_(); // goes to bootloader
       else if ( 'r' == foo ) { CPU_RESTART; } // restart CPU
-      else if ( 'z' == foo ) 
+      else if ( 'z' == foo )
       {
         for ( int ii = 0; ii < DLOG_SIZE; ii++ ) {
           DebCnt = 0;
@@ -462,6 +467,8 @@ void haltif_ttf(const char *__file, int __lineno, const char *__sexp, const char
 void debug_fault( int iFrom )
 {
   inDF_tt = 1;
+  if ( iFrom <= MAX_FLT_ISR )
+    inFault_tt = iFrom;
   if ( _DoBlink != NO_BLINK) digitalWrite( _DoBlink, !digitalRead(_DoBlink));
   static int cnt = 0;
 
@@ -497,7 +504,7 @@ void debug_fault( int iFrom )
   for ( int ii = 0; ii < DLOG_SIZE; ii++ ) {
     if ( DebBack[ DLOG_SIZE + ii ] ) {
       printf_tt(  "%u => %u", ii, DebInfo[ ii ]  );
-      printf_tt(  "\t%x", DebInfo[ ii ] );
+      printf_tt(  "\t0x%x", DebInfo[ ii ] );
       printf_tt(  "\t[L#%u", DebBack[ ii ] );
       printf_tt(  "_C#%u", DebBack[ DLOG_SIZE + ii ] );
       FlushPorts();
@@ -518,12 +525,6 @@ void debug_fault( int iFrom )
 #ifndef __IMXRT1052__
   uint32_t addr; // from: ...\hardware\teensy\avr\cores\teensy3\mk20dx128.c
   FlushPorts();
-
-  SIM_SCGC4 |= 0x00000400;
-  UART0_BDH = 0;
-  UART0_BDL = 26; // 115200 at 48 MHz
-  UART0_C2 = UART_C2_TE;
-  PORTB_PCR17 = PORT_PCR_MUX(3);
   printf_tt("\nfault: \n??: ");
   asm("ldr %0, [sp, #52]" : "=r" (addr) ::);
   printf_tt("%x\t\t??: ", addr);
@@ -556,7 +557,7 @@ void debug_fault( int iFrom )
 #ifndef __MKL26Z64__ // T_LC exclude 
   if ( iFrom > 0 && iFrom <= MAX_FLT_ISR ) {
     uint32_t *test = (uint32_t *)0xe000ed28;
-    char _Freg[][5] = { "CFR:", "HFR:", "DFR:", "MMA:", "BFA:", "ASR" }; // pg 386 YIU ARM
+    char _Freg[][5] = { "CFR:", "HFR:", "DFR:", "MMA:", "BFA:", "ASR:" }; // pg 386 YIU ARM
 
     uint32_t tii = 0;
     FlushPorts();
@@ -587,12 +588,12 @@ void debug_fault( int iFrom )
     printf_tt("\t 'z' Zero Debug logs\n");
     bool _wait = true;
     char foo;
+    while ( !DebugBlink( 125 )) pdbser1->flush(); // Make sure queue is empty.
     while (pdbser1->read() != -1) ; // Make sure queue is empty.
     while ( _wait ) {
-      FlushPorts();
+      // FlushPorts();
       DebugBlink( 125 );
       while ( pdbser1->available() ) {
-        DebugBlink( 100 );
         foo = pdbser1->read();
         if ( 'y' == foo ) _wait = false;
         else if ( 'd' == foo ) Debug_Dump();
@@ -610,6 +611,7 @@ void debug_fault( int iFrom )
     }
   }
   printf_tt("end Fault\n");
+  inFault_tt = 0;
   inDF_tt = 0;
   return;
 }
@@ -617,49 +619,66 @@ void debug_fault( int iFrom )
 // BUGBUG - PASS PARAM #1 - indicate when FAULT or just standard output loop
 void FlushPorts( void ) {
   DebugBlink( 100 );
-  return; // BUGBUG
+  if ( 0 == inFault_tt )
+    return;
   //if (_VectorsRam[IRQ_LPUART6 +16] != &unused_interrupt_vector) (*_VectorsRam[IRQ_LPUART6 +16])();
-
-#ifndef __IMXRT1052__
-  if (SIM_SCGC4 & SIM_SCGC4_USBOTG) usb_isr();
-  if (SIM_SCGC4 & SIM_SCGC4_UART0) uart0_status_isr();
-  if (SIM_SCGC4 & SIM_SCGC4_UART1) uart1_status_isr();
-  if (SIM_SCGC4 & SIM_SCGC4_UART2) uart2_status_isr();
-#elif defined(__MK64FX512__)
-  // TODO - TEST T_ttf.5/3.6 UART3 and UART4 and Serial6
-  if (SIM_SCGC4 & SIM_SCGC4_UART3) uart3_status_isr();
-  if (SIM_SCGC1 & SIM_SCGC1_UART4) uart4_status_isr();
-  if (SIM_SCGC1 & SIM_SCGC1_UART5) uart5_status_isr();
-#elif defined(__MK66FX1M0__)
-  // TODO - TEST T_ttf.5/3.6 UART3 and UART4 and Serial6
-  if (SIM_SCGC4 & SIM_SCGC4_UART3) uart3_status_isr();
-  if (SIM_SCGC1 & SIM_SCGC1_UART4) uart4_status_isr();
-  if (SIM_SCGC2 & SIM_SCGC2_LPUART0) lpuart0_status_isr();
+  for ( int ii = 0; ii < 10; ii++ ) {
+#if defined(__IMXRT1052__)
+    // HANDLE T4 FAULT PUSH HERE
+    pdbser1->flush(); //delayMicroseconds(100); pdbser1->flush(); // BUGBUG - uses custom CORES Serial.Flush()
 #endif
+#ifndef __IMXRT1052__
+    if (SIM_SCGC4 & SIM_SCGC4_USBOTG) usb_isr();
+    if (SIM_SCGC4 & SIM_SCGC4_UART0) uart0_status_isr();
+    if (SIM_SCGC4 & SIM_SCGC4_UART1) uart1_status_isr();
+    if (SIM_SCGC4 & SIM_SCGC4_UART2) uart2_status_isr();
+#elif defined(__MK64FX512__)
+    // TODO - TEST T_ttf.5/3.6 UART3 and UART4 and Serial6
+    if (SIM_SCGC4 & SIM_SCGC4_UART3) uart3_status_isr();
+    if (SIM_SCGC1 & SIM_SCGC1_UART4) uart4_status_isr();
+    if (SIM_SCGC1 & SIM_SCGC1_UART5) uart5_status_isr();
+#elif defined(__MK66FX1M0__)
+    // TODO - TEST T_ttf.5/3.6 UART3 and UART4 and Serial6
+    if (SIM_SCGC4 & SIM_SCGC4_UART3) uart3_status_isr();
+    if (SIM_SCGC1 & SIM_SCGC1_UART4) uart4_status_isr();
+    if (SIM_SCGC2 & SIM_SCGC2_LPUART0) lpuart0_status_isr();
+#endif
+  }
 }
 
 #ifdef __MKL26Z64__ // T_LC Does not have CycleCounter
-void DebugBlink( uint32_t wait ) {
+bool DebugBlink( uint32_t wait ) {
 #define MilliFCPU (F_CPU / 450000L) // F_CPU cycles per ms
   static uint32_t LastCnt = 0;
+  bool bRetVal = 0;
   if ( (0 == wait) || wait < ( ( LastCnt ) / MilliFCPU ) ) {
     LastCnt = 0;
-    if ( _DoBlink != NO_BLINK) digitalWrite( _DoBlink, !digitalRead(_DoBlink));
+    if ( _DoBlink != NO_BLINK) {
+      digitalWrite( _DoBlink, !digitalRead(_DoBlink));
+      bRetVal = 1;
+    }
   }
   LastCnt++;
+  return bRetVal;
 }
 #else
 // TODO - rename DebugBlink - incorporate selective pin toggle and delay
 // return TRUE when prior call was 'wait' milliseconds prior
-void DebugBlink( uint32_t wait ) {
+bool DebugBlink( uint32_t wait ) {
 #define MilliFCPU (F_CPU / 1000L) // F_CPU cycles per ms
   static uint32_t LastCnt = 0;
+  bool bRetVal = 0;
   ARM_DEMCR |= ARM_DEMCR_TRCENA; // Assure Cycle Counter active
   ARM_DWT_CTRL |= ARM_DWT_CTRL_CYCCNTENA;
   if ( (0 == wait) || wait < ( ( ARM_DWT_CYCCNT - LastCnt ) / MilliFCPU ) ) {
     LastCnt = ARM_DWT_CYCCNT;
-    if ( _DoBlink != NO_BLINK) digitalWrite( _DoBlink, !digitalRead(_DoBlink));
+    if ( _DoBlink != NO_BLINK) {
+      digitalWrite( _DoBlink, !digitalRead(_DoBlink));
+      bRetVal = 1;
+    }
   }
+  return bRetVal;
+  //FlushPorts();
 }
 #endif
 
@@ -796,10 +815,10 @@ extern volatile uint32_t systick_millis_count;
 void userDebugDumptt() {
   volatile unsigned int nn;
   pdbser1->flush();
-  faultPrintf("\n userDebugDumptt() in debug_tt  ___ \n", 0);
+  printf_tt("\n userDebugDumptt() in debug_tt  ___ \n", 0);
   pdbser1->flush();
 #if defined(__IMXRT1052__)
-  faultPrintf("\n F_CPU=%u", F_CPU_ACTUAL );
+  printf_tt("\n F_CPU=%u", F_CPU_ACTUAL );
 #endif
   systick_millis_count = 1;
   elapsedMicros systickEu = 0;
@@ -830,10 +849,10 @@ void userDebugDumptt() {
     for (nn = 0; nn < 10000000; nn++) ;
     if ( !(millis() % 30)) {
       pdbser1->flush();
-      faultPrintf(" @micros =%d" , micros());
+      printf_tt(" @micros =%d" , micros());
       pdbser1->flush();
 #if defined(__IMXRT1052__)
-      faultPrintf( "\tdeg  C=%2.2f\n" , tempmonGetTemp() );
+      printf_tt( "\tdeg  C=%u\n" , (uint32_t)tempmonGetTemp() );
 #endif
       pdbser1->flush();
     }

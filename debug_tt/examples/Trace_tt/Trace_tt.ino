@@ -54,13 +54,13 @@ void setup() {
   Serial.println("\n" __FILE__ " " __DATE__ " " __TIME__);
 
   debBegin_tt( &SERIAL_tt, LED_BUILTIN, 12);
-  //debBegin_tt( (HardwareSerial*)&Serial, LED_BUILTIN, 12);
+  // debBegin_tt( (HardwareSerial*)&Serial, LED_BUILTIN, 12);
   // Sample prints through the debug_tt code printf
   printf_tt( "TESTING 1 2 3 ...456... %s\n", "xyz" );
   printf_tt( "%u\t", 123456 );
   printf_tt( "TESTING ABC.\n" );
 
-  Serial.println("\tSHOULD END WITH >> Setup DONE! All Good?");
+  //Serial.println("\tSHOULD END WITH >> Setup DONE! All Good?");
   foo();
   where_tt( );
   addr_tt( setup );
@@ -69,8 +69,10 @@ void setup() {
   DebugTest2();
   debTrace_tt( ARM_DWT_CYCCNT, __LINE__, "You are here" );
   debText_tt( __func__ ); // show function entry
-  for ( ii = 0; ii < 5; ii++ )
-    debTrace_tt( ARM_DWT_CYCCNT, __LINE__, __func__ );
+  for ( ii = 0; ii < 5; ii++ ) {
+    debTrace_tt( ARM_DWT_CYCCNT, __LINE__, "first" );
+    debTrace_tt( ARM_DWT_CYCCNT, __LINE__, "second" );
+  }
   debText_tt( __func__ ); // show function entry
   assert_tt( 0 );
   debTraceShow_tt( -3, "CycCnt %u", "\tline %u", "\tfunc %s" );
@@ -115,13 +117,15 @@ void loop() {
   haltif_tt( !digitalReadFast( BUTTON_ISR ) ); // Stop on button press
   ii++;
   ii &= 7;
+  printf_tt( "delay(2000) ...\n" );
   delay(2000);
   qBlink();
   assert_tt( 1000 - 1000 );
   if ( !(--jj) ) {
     deb_tt( 8, __LINE__ );
 #if defined(__IMXRT1052__)
-    printf_tt( "\tdeg  C=%2.2f\n" , tempmonGetTemp() );
+    printf_tt( "\tdeg  C=%u\n" , (uint32_t)tempmonGetTemp() );
+    GPT1_CNT = 5; // FAULT
 #else
     if ( UART2_C2 ) deb_tt( 9, __LINE__ );  // UART2 not initialized, accessing this register causes a Hard Fault
 #endif

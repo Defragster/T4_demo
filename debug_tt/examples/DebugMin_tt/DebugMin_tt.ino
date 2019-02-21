@@ -28,17 +28,12 @@
 // It can call functions or dump globals.
 void Debug_Dump(void)
 {
-  SERIAL_tt.flush();
   where_tt( );
-  SERIAL_tt.flush();
-  SERIAL_tt.print(" User Custom Debug Dump. Micros==");
-  SERIAL_tt.flush();
-  SERIAL_tt.println(micros());
-  SERIAL_tt.flush();
+  printf_tt(" User Custom Debug Dump. Micros==", micros());
   // Put code here to call after Fault or HaltIf() - or call it in sketch
-  debTraceShow_tt( -3, "CycCnt %u", "\tline %u", "\tfunc %s" );
-  debTraceShow_tt( 0, "CycCnt %u", "\tline %u", "\tfunc %s" );
-  debTraceShow_tt( -3, "CycCnt %u", "\tline %u", "\tfunc %s" );
+  debTraceShow_tt( -3, "CycCnt %u", "\tline %u", "\tfunc %s" ); // dump whole trace
+  debTraceShow_tt( 0, "CycCnt %u", "\tline %u", "\tfunc %s" ); // clear trace data
+  debTraceShow_tt( -3, "CycCnt %u", "\tline %u", "\tfunc %s" ); // dump whole trace
   return;
 }
 #endif
