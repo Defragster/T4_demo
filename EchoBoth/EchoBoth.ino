@@ -8,9 +8,9 @@
 
 // set this to the hardware serial port you wish to use
 #define HWSERIAL Serial1
-#define HWSERIALBAUD 1843200 // 115200
+#define HWSERIALBAUD 1843200 // 921600 // 115200
 
-/* 
+/*
 // Using the same on T4 Serial1 and Serial4 (PJRC DEBUG) requires:
 T:\arduino-1.8.8T4_146\hardware\teensy\avr\cores\teensy4\debugprintf.c :: void printf_debug_init(void)
 {
@@ -18,7 +18,42 @@ T:\arduino-1.8.8T4_146\hardware\teensy\avr\cores\teensy4\debugprintf.c :: void p
         IOMUXC_SW_MUX_CTL_PAD_GPIO_AD_B1_06 = 2; // Arduino pin 17
         // LPUART3_BAUD = LPUART_BAUD_OSR(25) | LPUART_BAUD_SBR(8); // ~115200 baud
     LPUART3_BAUD = LPUART_BAUD_OSR(12) | LPUART_BAUD_SBR(1);  // 1843200 baud
+*/
 
+void setup() {
+  Serial.begin(9600);
+  HWSERIAL.begin(HWSERIALBAUD);
+  pinMode(LED_BUILTIN, OUTPUT);
+  digitalWrite( LED_BUILTIN, HIGH );
+  while ( !Serial && millis() < 2000 );
+  Serial.println("\n" __FILE__ " " __DATE__ " " __TIME__);
+  Serial.printf(" PORT Serial1 and BAUD=%d \n", HWSERIALBAUD );
+}
+
+char buff[200];
+void loop() {
+  char incomingByte;
+
+  if (Serial.available() > 0) {
+    digitalWriteFast( LED_BUILTIN, !digitalReadFast( LED_BUILTIN) );
+    while (Serial.available() > 0) {
+      incomingByte = Serial.read();
+      HWSERIAL.print(incomingByte);
+    }
+  }
+  if (HWSERIAL.available() > 0) {
+    int ii = HWSERIAL.available();
+    digitalWriteFast( LED_BUILTIN, !digitalReadFast( LED_BUILTIN) );
+    while (HWSERIAL.available() > 0) {
+      HWSERIAL.readBytes( buff, ii );
+      buff[ii]=0;
+      Serial.print(buff);
+    }
+  }
+}
+
+
+/*
 // for debug_tt to work when Faulted requires :: T:\arduino-1.8.8T4_146\hardware\teensy\avr\cores\teensy4\debugprintf.c
 void HardwareSerial::flush(void)
 {
@@ -42,7 +77,7 @@ void HardwareSerial::flush(void)
     }
     tx_buffer_tail_ = tail;
     if (head == tail) {
-      port->CTRL &= ~LPUART_CTRL_TIE; 
+      port->CTRL &= ~LPUART_CTRL_TIE;
         port->CTRL |= LPUART_CTRL_TCIE; // Actually wondering if we can just leave this one on...
     }
   }
@@ -52,34 +87,4 @@ void HardwareSerial::flush(void)
   // return bRetVal;
 }
 
-
 */
-
-void setup() {
-  Serial.begin(9600);
-  HWSERIAL.begin(HWSERIALBAUD);
-  pinMode(LED_BUILTIN, OUTPUT);
-  digitalWrite( LED_BUILTIN, HIGH );
-  while ( !Serial && millis() < 600 );
-  Serial.println("\n" __FILE__ " " __DATE__ " " __TIME__);
-  Serial.printf(" PORT Serial1 and BAUD=%d \n", HWSERIALBAUD );
-}
-
-void loop() {
-  char incomingByte;
-
-  if (Serial.available() > 0) {
-    digitalWriteFast( LED_BUILTIN, !digitalReadFast( LED_BUILTIN) );
-    while (Serial.available() > 0) {
-      incomingByte = Serial.read();
-      HWSERIAL.print(incomingByte);
-    }
-  }
-  if (HWSERIAL.available() > 0) {
-    digitalWriteFast( LED_BUILTIN, !digitalReadFast( LED_BUILTIN) );
-    while (HWSERIAL.available() > 0) {
-      incomingByte = HWSERIAL.read();
-      Serial.print(incomingByte);
-    }
-  }
-}
