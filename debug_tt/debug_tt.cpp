@@ -1,5 +1,6 @@
 #include <Arduino.h>  // types and class define
 #include "debug_tt.h"
+#include "arm_math.h"
 
 #ifndef NO_DEBUG_tt
 
@@ -61,12 +62,14 @@ volatile bool TraceOn = true;
 uint32_t lastL_tt = 0;
 char * lastF_tt = 0;
 uint32_t inFault_tt = 0;
+uint32_t TraceNum_tt = 0;
 
 // CALL TRACEshow from debug_tt break
 // pass -1 == MAX to stop log
 // pass -2 == MAX to start log
 
 void debTrace_ttf( uint32_t aa, uint32_t bb, const char *cc, int __lineno, const char *__func) {
+  TraceNum_tt++;
   if ( !TraceOn ) return;
   TraceCnt++;
   TraceInfo[ TraceIndex ][0] = aa;
@@ -78,10 +81,21 @@ void debTrace_ttf( uint32_t aa, uint32_t bb, const char *cc, int __lineno, const
   TraceIndex &= TraceMask;
 }
 
-// MAX is max # to print. -1 stops Trace recording, -2 enables, -3 says print all, 0 says to clear the Trace data
+// MAX is max # to print. -1 stops Trace recording, -2 enables, -3 says print all, -4 is a -3 then 0, 0 says to clear the Trace data
 void debTraceShow_tt( int Max, const char *aa, const char *bb, const char *cc) {
-  int ii, jj = 0, kk = TraceCnt;
-  bool WasTraceOn = TraceOn;
+  int ii, jj = 0, kk, nMax = Max;
+  int mTraceIndex;
+  int mTraceCnt;
+
+  uint32_t safe_read;
+  do { // must :: #include "arm_math.h"
+    __LDREXW(&safe_read);
+    mTraceIndex = TraceIndex;
+    mTraceCnt = TraceCnt;
+  } while ( __STREXW(1, &safe_read));
+  kk = mTraceCnt;
+
+
   if ( 0 == Max ) {
     TraceCnt = 0;
     TraceIndex = 0;
@@ -95,44 +109,49 @@ void debTraceShow_tt( int Max, const char *aa, const char *bb, const char *cc) {
     TraceOn = true;
     return;
   }
-  else {
-    TraceOn = false;
-    if ( -3 == Max ) {
-      Max = DTRACE_SIZE;
+  else { //
+    if ( -3 == Max || -4 == Max ) {
+      nMax = DTRACE_SIZE;
     }
-    if ( TraceIndex > 0) {
-      for ( ii = TraceIndex - 1; ii >= 0 && jj < kk && jj < Max; ii--) {
+    if ( mTraceIndex > 0) {
+      for ( ii = mTraceIndex - 1; ii >= 0 && jj < kk && jj < nMax; ii--) {
         jj++;
         printf_tt( "#%u: ", jj );
         //faultPrintf( "(ii=%u): ", ii );
         printf_tt( aa, TraceInfo[ ii ][0] );
         printf_tt( bb, TraceInfo[ ii ][1] );
         printf_tt( cc, (char *)TraceInfo[ ii ][2] );
-        printf_tt( "\tin %s() ", (char *)TraceInfo[ ii ][4] );
-//        faultPrintf( "\tin %s() ", (char *)TraceInfo[ ii ][4] );
-// DEBUG FIFO loop #        faultPrintf( "[ii:%u]",  ii );
-        printf_tt( "L#:%u\n", TraceInfo[ ii ][3] );
+        printf_tt( "\tin %s ", (char *)TraceInfo[ ii ][4] );
+// DEBUG LIFO loop #        
+    printf_tt( "[ii:%u]",  ii );
+        printf_tt( "L#:%u {%u\n", TraceInfo[ ii ][3], TraceNum_tt ); // bugbug test
         // delayMicroseconds( 30 );
       }
     }
     if ( kk > TraceIndex ) {
-      for ( ii = DTRACE_SIZE - 1; ii >= TraceIndex && jj < kk && jj < Max; ii--) {
+      for ( ii = DTRACE_SIZE - 1; ii >= TraceIndex && jj < kk && jj < nMax; ii--) {
         jj++;
         printf_tt( "#_%u: ", jj );
         //faultPrintf( "(ii=%u): ", ii );
         printf_tt( aa, TraceInfo[ ii ][0] );
         printf_tt( bb, TraceInfo[ ii ][1] );
         printf_tt( cc, (char *)TraceInfo[ ii ][2] );
-        printf_tt( "\tin %s() ", (char *)TraceInfo[ ii ][4] );
-// DEBUG FIFO loop #        faultPrintf( "[ii:%u]",  ii );
-        printf_tt( "L#:%u\n", TraceInfo[ ii ][3] );
-        // delayMicroseconds( 30 );
+        printf_tt( "\tin %s ", (char *)TraceInfo[ ii ][4] );
+// DEBUG LIFO loop #        
+  printf_tt( "[ii:%u]",  ii );
+        printf_tt( "L#:%u {%u\n", TraceInfo[ ii ][3], TraceNum_tt ); // bugbug test
       }
     }
-    TraceOn = WasTraceOn;
+    if ( -4 == Max ) { // reduce now current TraceCnt
+      kk = -1;
+      do { // must :: #include "arm_math.h"
+        __LDREXW(&safe_read);
+        kk = TraceCnt - mTraceCnt;
+      } while ( __STREXW(1, &safe_read));
+      TraceCnt = kk;  // BUGBUG - this could still lose a count with _isr between this and while exit
+    }
   }
 }
-
 
 #define DLOG_SIZE 10
 uint32_t DebInfo[ (DLOG_SIZE ) ] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };

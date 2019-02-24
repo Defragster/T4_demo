@@ -53,7 +53,7 @@ void setup() {
   pinMode( BUTTON_ISR, INPUT_PULLUP );
   Serial.println("\n" __FILE__ " " __DATE__ " " __TIME__);
 
-  debBegin_tt( &SERIAL_tt, LED_BUILTIN, 12);
+  debBegin_tt( (HardwareSerial*)&SERIAL_tt, LED_BUILTIN, 12);
   // debBegin_tt( (HardwareSerial*)&Serial, LED_BUILTIN, 12);
   // Sample prints through the debug_tt code printf
   printf_tt( "TESTING 1 2 3 ...456... %s\n", "xyz" );

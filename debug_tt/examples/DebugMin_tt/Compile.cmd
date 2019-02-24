@@ -23,8 +23,8 @@ rem
 
 REM defragster was here 
 
-set model=teensy36
-set speed=180
+set model=teensy4b
+set speed=396000000
 set opt=o2std
 set usb=serial
 cd.
