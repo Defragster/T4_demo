@@ -14,16 +14,22 @@ void setup() {
   count_per_second = 0;
   prior_msec = millis();
 }
-
+int blog = 0;
 void loop() {
-  Serial.print("count=");
+  Serial.print("c#");
   Serial.print(count);
-  Serial.print(", lines/sec=");
+  Serial.print(" b#");
+  Serial.print(blog);
+  Serial.print(", lines/s=");
   Serial.println(count_per_second);
-  count = count + 1;
+  #if !defined(__IMXRT1062__)
+  if ( Serial.availableForWrite() > 15 )
+  #endif
+    count = count + 1;
   uint32_t msec = millis();
   if (msec - prior_msec > 1000) {
     prior_msec = prior_msec + 1000;
+    blog = (msec - prior_msec) / 10;
     count_per_second = count - prior_count;
     prior_count = count;
   }
