@@ -8,6 +8,7 @@ void setup() {
   Serial.begin(1000000);
   Serial2.begin(115200);
   Serial2.print( "Hello World" );
+  pinMode(14, OUTPUT); // Change value with each output string for FreqCount
   //  while (!Serial) ;
   count = 10000000;
   prior_count = count;
@@ -23,6 +24,7 @@ void loop() {
     c = Serial.read();
     if (c == '\n') {
       count = count + 1;
+      digitalWriteFast( 14, count & 1 );
       uint32_t msec = millis();
       if (msec - prior_msec > 1000) {
         prior_msec = prior_msec + 1000;
