@@ -1,0 +1,123 @@
+Telemetry Viewer File Format v0.5
+
+GUI Settings:
+
+	tile column count = 6
+	tile row count = 6
+	show plot tooltips = true
+	smooth scrolling = true
+	opengl antialiasing = true
+	show fps and period = false
+	chart index for benchmarks = -1
+
+Communication Settings:
+
+	port = UART: COM25
+	uart baud rate = 9600
+	tcp/udp port number = 8080
+	packet type = CSV
+	sample rate = 200000
+
+4 Data Structure Locations:
+
+	location = 0
+	processor index = -1
+	name = wave a
+	color = 0xFF0000
+	unit = num
+	conversion factor a = 1.0
+	conversion factor b = 1.0
+
+	location = 1
+	processor index = -1
+	name = wave b
+	color = 0x00FF00
+	unit = num
+	conversion factor a = 1.0
+	conversion factor b = 1.0
+
+	location = 2
+	processor index = -1
+	name = wave c
+	color = 0x00FF00
+	unit = num
+	conversion factor a = 1.0
+	conversion factor b = 1.0
+
+	location = 3
+	processor index = -1
+	name = Sine
+	color = 0x00FF00
+	unit = num
+	conversion factor a = 1.0
+	conversion factor b = 1.0
+
+4 Charts:
+
+	chart type = Time Domain Chart
+	top left x = 0
+	top left y = 0
+	bottom right x = 2
+	bottom right y = 2
+	datasets = 0
+	sample count = 1000
+	autoscale y-axis minimum = true
+	manual y-axis minimum = -1.0
+	autoscale y-axis maximum = true
+	manual y-axis maximum = 1.0
+	show x-axis title = true
+	show x-axis scale = true
+	show y-axis title = true
+	show y-axis scale = true
+	show legend = true
+
+	chart type = Time Domain Chart
+	top left x = 3
+	top left y = 0
+	bottom right x = 5
+	bottom right y = 2
+	datasets = 1
+	sample count = 1000
+	autoscale y-axis minimum = true
+	manual y-axis minimum = -1.0
+	autoscale y-axis maximum = true
+	manual y-axis maximum = 1.0
+	show x-axis title = true
+	show x-axis scale = true
+	show y-axis title = true
+	show y-axis scale = true
+	show legend = true
+
+	chart type = Time Domain Chart
+	top left x = 0
+	top left y = 3
+	bottom right x = 2
+	bottom right y = 5
+	datasets = 2
+	sample count = 1000
+	autoscale y-axis minimum = true
+	manual y-axis minimum = -1.0
+	autoscale y-axis maximum = true
+	manual y-axis maximum = 1.0
+	show x-axis title = true
+	show x-axis scale = true
+	show y-axis title = true
+	show y-axis scale = true
+	show legend = true
+
+	chart type = Time Domain Chart
+	top left x = 3
+	top left y = 3
+	bottom right x = 5
+	bottom right y = 5
+	datasets = 3
+	sample count = 1000
+	autoscale y-axis minimum = true
+	manual y-axis minimum = -1.0
+	autoscale y-axis maximum = true
+	manual y-axis maximum = 1.0
+	show x-axis title = true
+	show x-axis scale = true
+	show y-axis title = true
+	show y-axis scale = true
+	show legend = true
