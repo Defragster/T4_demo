@@ -1,11 +1,12 @@
 
 Test Package:
-lps_test.exe : for Windows - runs to receive 100 blocks of 32KB
+lps_test.exe : (tested) for Windows - runs to receive 100 blocks of 32KB
  >> Param1 :: serial port like 'Com25'
  >> Param2 :: 0 for 100000000 block loops
  >> Param2 :: 1 for 1000000 block loops
  >> Param2 :: 2-9 for # of 100 block loops
 OUTPUT :: reads COM# block of data and shows one string per block
+ >> Param2 :: S to send out "count= 10093852, lines per second=\n"
 
 lps_test.c : source for precompiled EXE - could take mods for non-Windows
 
@@ -21,6 +22,9 @@ TelemViewFast : sketch for T4 to demo Lines Per Second output
  >> uint32_t usDelay = 10; // start us delay between transmit
  >> //#define DELAY_DROP 1 // comment to keep a static delay
 
+lps_testr ; Receive sketch for 'lps_test port S'
+ >> count \n and dumps one line each second with lps count appended
+ >> toggles pin 14 on each '\n' received for remote freqCount
 
 Usage: Wire Serial as noted above, and FreqCount pin
 Put Echoboth on a Teensy
