@@ -46,7 +46,7 @@ int gettimeofday(struct timeval * tp, struct timezone * tzp);
 
 int surge = 0;
 
-#define SIZE_RX 4097*8
+#define SIZE_RX 4097*16
 int receive_bytes_X(PORTTYPE port, int cnt)
 {
 	int count=0;
@@ -70,7 +70,7 @@ int receive_bytes_X(PORTTYPE port, int cnt)
 			else if (r > 0) {
 				count += r;
 //#if 0  // NOT WINDOWS
-				if ( 0x3e8 && count ) {
+				if ( 0x200 && count ) {
 					if ( 1 == once ) {
 						int pp=0;
 						once =0;
@@ -123,8 +123,8 @@ int receive_bytes_X(PORTTYPE port, int cnt)
 			r = ReadFile(port, buf + count, len - count, &n, NULL);
 			if (!r) die("read error\n");
 			if (n > 0) {
+				waiting=0;
 				count += n;
-
 				if ( 0x200 && count ) {
 					if ( 1 == once ) {
 						int pp=0;
@@ -222,9 +222,9 @@ int main(int argc, char **argv)
 			printf(" ------\t elapsed time %.3f secs for %u KBytes\n \touter loop left %d\n", elapsed/1000.0, blkcnt*SIZE_RX/1024, loopblks );
 			if (loopblks>0) { 
 				delay(surge*0.1);
-				close_port(fd);
+				//close_port(fd);
 				delay(surge*0.1);
-				fd=0;
+				//fd=0;
 			}
 		} while ( loopblks > 0);
 	}
@@ -285,8 +285,8 @@ PORTTYPE open_port_and_set_baud_or_die(const char *name, long baud)
 	// // cfg.dcb.BaudRate = 115200;
 	cfg.dcb.fBinary = TRUE;
 	cfg.dcb.fParity = FALSE;
-	cfg.dcb.fOutxCtsFlow = FALSE;
-	cfg.dcb.fOutxDsrFlow = FALSE;
+	cfg.dcb.fOutxCtsFlow = TRUE;
+	cfg.dcb.fOutxDsrFlow = TRUE;
 	cfg.dcb.fOutX = FALSE;
 	cfg.dcb.fInX = FALSE;
 	cfg.dcb.fErrorChar = FALSE;
