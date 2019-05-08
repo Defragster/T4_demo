@@ -46,7 +46,7 @@ int gettimeofday(struct timeval * tp, struct timezone * tzp);
 
 int surge = 0;
 
-#define SIZE_RX 4097*16
+#define SIZE_RX 4097*2
 int receive_bytes_X(PORTTYPE port, int cnt)
 {
 	int count=0;
@@ -69,7 +69,7 @@ int receive_bytes_X(PORTTYPE port, int cnt)
 			if (r < 0 && errno != EAGAIN && errno != EINTR) return -1;
 			else if (r > 0) {
 				count += r;
-//#if 0  // NOT WINDOWS
+//#if 0  // NOT WINDOWS - Windows code below may be NEWER !!!!
 				if ( 0x200 && count ) {
 					if ( 1 == once ) {
 						int pp=0;
@@ -79,7 +79,7 @@ int receive_bytes_X(PORTTYPE port, int cnt)
 						while ( '\n' != buf[once+pp] ) pp++;
 						pp--;
 						buf[once+pp]=0;
-						printf( "#%d[%dK] : __>> %s <<__\n", ii, SIZE_RX/1024, &buf[once] );
+						printf( "#%d[%dK] : __>> %s <<__(%d)\n", ii, SIZE_RX/1024, &buf[once], pp );
 						once =0;
 					}
 				}
@@ -125,16 +125,16 @@ int receive_bytes_X(PORTTYPE port, int cnt)
 			if (n > 0) {
 				waiting=0;
 				count += n;
-				if ( 0x200 && count ) {
+				if ( 0x200 < count ) {
 					if ( 1 == once ) {
 						int pp=0;
-						once =0;
+						once =0x100;
 						while ( '\n' != buf[once] ) once++;
 						once++;
 						while ( '\n' != buf[once+pp] ) pp++;
 						pp--;
 						buf[once+pp]=0;
-						printf( "#%d[%dK] : __>> %s <<__\n", ii, SIZE_RX/1024, &buf[once] );
+						printf( "#%d[%dK] : __>> %s <<__(%d)\n", ii, SIZE_RX/1024, &buf[once], pp );
 						once =0;
 					}
 				}
